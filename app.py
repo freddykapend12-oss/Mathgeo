@@ -4,9 +4,21 @@ import math
 import numpy as np
 import pandas as pd
 
-# Configuration
+# Configuration de la page
 st.set_page_config(page_title="MathGeo Pro", page_icon="🌍", layout="wide")
 st.title("🌍 MathGeo Pro - Suite Ingénierie Complète")
+
+# --- BARRE LATÉRALE (LOGO ET CONTACT) ---
+with st.sidebar:
+    st.image("https://img.icons8.com/color/96/geography.png", width=70)
+    st.title("MathGeo Pro")
+    st.markdown("---")
+    st.markdown("### 👨‍💻 À propos")
+    st.write("Outils de calculs avancés pour géologues et ingénieurs.")
+    st.markdown("---")
+    st.markdown("### 📬 Contact")
+    st.write("📍 Kolwezi, RDC")
+    st.markdown("[🔗 GitHub](https://github.com/freddykapend12-oss)")
 
 def export_csv(data_dict):
     df = pd.DataFrame([data_dict])
