@@ -1,4 +1,47 @@
-# --- TAB 2 : GÉOSCIENCES (MIS À JOUR AVEC HYDRO & GÉOCHIMIE) ---
+import streamlit as st
+import sympy as sp
+import math
+import numpy as np
+import pandas as pd
+
+# Configuration
+st.set_page_config(page_title="MathGeo Pro", page_icon="🌍", layout="wide")
+st.title("🌍 MathGeo Pro - Suite Ingénierie Complète")
+
+def export_csv(data_dict):
+    df = pd.DataFrame([data_dict])
+    return df.to_csv(index=False).encode('utf-8')
+
+# Définition des onglets principaux
+tab1, tab2, tab3 = st.tabs(["Mathématiques", "Géosciences", "Physique"])
+
+# --- TAB 1 : MATHÉMATIQUES ---
+with tab1:
+    st.header("Analyse Mathématique")
+    choix = st.selectbox("Opération :", ["Dérivée", "Intégrale", "Équation 2nd degré"])
+    x = sp.symbols('x')
+    if choix == "Dérivée":
+        expr = st.text_input("Fonction f(x) :", "2*x**2 + 3*x")
+        if st.button("Calculer"):
+            f = sp.sympify(expr)
+            res = sp.diff(f, x)
+            st.latex(r"\frac{d}{dx}(" + sp.latex(f) + ") = " + sp.latex(res))
+    elif choix == "Intégrale":
+        expr = st.text_input("Fonction f(x) :", "2*x")
+        if st.button("Calculer"):
+            f = sp.sympify(expr)
+            res = sp.integrate(f, x)
+            st.latex(r"\int (" + sp.latex(f) + ") dx = " + sp.latex(res) + " + C")
+    elif choix == "Équation 2nd degré":
+        a, b, c = st.number_input("a"), st.number_input("b"), st.number_input("c")
+        if st.button("Résoudre"):
+            delta = b**2 - 4*a*c
+            st.latex(fr"\Delta = {b}^2 - 4({a})({c}) = {delta}")
+            if delta >= 0:
+                x1, x2 = (-b - math.sqrt(delta))/(2*a), (-b + math.sqrt(delta))/(2*a)
+                st.success(f"x1={x1:.2f}, x2={x2:.2f}")
+
+# --- TAB 2 : GÉOSCIENCES ---
 with tab2:
     st.header("Géosciences")
     sous_domaine = st.selectbox(
@@ -55,7 +98,6 @@ with tab2:
                 st.write(f"**Écart-type :** {ecart_type:.2f}")
                 st.error(f"**Seuil d'anomalie recommandé ($\mu + 2\sigma$) :** {seuil_anomalie:.2f}")
                 
-                # Utilisation de ta fonction export_csv existante
                 df_resultats = pd.DataFrame({"Teneurs": arr})
                 csv = df_resultats.to_csv(index=False).encode('utf-8')
                 st.download_button(
@@ -86,3 +128,18 @@ with tab2:
             r = st.number_input("Résistance (Ohm) :")
             if st.button("Calculer Rho"):
                 st.latex(r"\rho = K \cdot R = " + f"{k*r:.2f} \, \Omega \cdot m")
+
+# --- TAB 3 : PHYSIQUE ---
+with tab3:
+    st.header("Physique")
+    sous_cat = st.selectbox("Module :", ["Mécanique Rationnelle", "Mécanique des Fluides"])
+    if sous_cat == "Mécanique Rationnelle":
+        m = st.number_input("Masse (kg) :")
+        a = st.number_input("Accélération (m/s²) :")
+        if st.button("Calculer Force"):
+            st.latex(r"F = m \cdot a = " + f"{m*a} \, N")
+    elif sous_cat == "Mécanique des Fluides":
+        rho = st.number_input("Densité (kg/m³) :", value=1000.0)
+        h = st.number_input("Profondeur (m) :")
+        if st.button("Calculer Pression"):
+            st.latex(r"P = \rho \cdot g \cdot h = " + f"{rho * 9.81 * h:.2f} \, \text{Pa}")
