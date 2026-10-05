@@ -3,6 +3,7 @@ import sympy as sp
 import math
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # Configuration de la page
 st.set_page_config(page_title="MathGeo Pro", page_icon="🌍", layout="wide")
@@ -19,10 +20,6 @@ with st.sidebar:
     st.markdown("### 📬 Contact")
     st.write("📍 Kolwezi, RDC")
     st.markdown("[🔗 GitHub](https://github.com/freddykapend12-oss)")
-
-def export_csv(data_dict):
-    df = pd.DataFrame([data_dict])
-    return df.to_csv(index=False).encode('utf-8')
 
 # Définition des onglets principaux
 tab1, tab2, tab3 = st.tabs(["Mathématiques", "Géosciences", "Physique"])
@@ -45,7 +42,7 @@ with tab1:
             res = sp.integrate(f, x)
             st.latex(r"\int (" + sp.latex(f) + ") dx = " + sp.latex(res) + " + C")
     elif choix == "Équation 2nd degré":
-        a, b, c = st.number_input("a"), st.number_input("b"), st.number_input("c")
+        a, b, c = st.number_input("a", value=1.0), st.number_input("b", value=-3.0), st.number_input("c", value=2.0)
         if st.button("Résoudre"):
             delta = b**2 - 4*a*c
             st.latex(fr"\Delta = {b}^2 - 4({a})({c}) = {delta}")
@@ -84,18 +81,59 @@ with tab2:
             st.success(f"RQD = {(l_sum/l_tot)*100:.2f} %")
 
     elif sous_domaine == "Cote Piezométrique (Hydrogéologie)":
-        st.subheader("Calcul de la cote piézométrique absolue")
-        alt_margelle = st.number_input("Altitude du point de mesure / Margelle (m)", value=1250.0)
-        prof_eau = st.number_input("Profondeur de l'eau mesurée par rapport au sol (m)", value=12.4)
-        cote_piezo = alt_margelle - prof_eau
-        st.metric(label="Cote piézométrique (Niveau d'eau /mer)", value=f"{cote_piezo:.2f} m")
-        st.info("💡 Cette valeur est prête pour la cartographie piézométrique.")
+        st.subheader("Cartographie et Calcul Piezométrique Multipoints")
+        st.write("Modifie ou ajoute les données de tes forages/puits dans le tableau ci-dessous :")
+        
+        df_default = pd.DataFrame({
+            "Puits": ["P1", "P2", "P3", "P4"],
+            "X_UTM": [512300.0, 513400.0, 514100.0, 512800.0],
+            "Y_UTM": [8812300.0, 8813000.0, 8813500.0, 8812100.0],
+            "Altitude_Margelle": [1250.0, 1255.0, 1248.0, 1252.0],
+            "Profondeur_Eau": [12.4, 14.1, 10.2, 11.5]
+        })
+        
+        edited_df = st.data_editor(df_default, num_rows="dynamic", use_container_width=True)
+        
+        if st.button("Calculer et Générer la Carte"):
+            if not edited_df.empty:
+                edited_df["Cote_Piezo"] = edited_df["Altitude_Margelle"] - edited_df["Profondeur_Eau"]
+                st.success("Calculs effectués avec succès !")
+                st.dataframe(edited_df, use_container_width=True)
+                
+                fig, ax = plt.subplots(figsize=(8, 6))
+                sc = ax.scatter(
+                    edited_df["X_UTM"], 
+                    edited_df["Y_UTM"], 
+                    c=edited_df["Cote_Piezo"], 
+                    cmap="viridis", 
+                    s=120, 
+                    edgecolor="k"
+                )
+                plt.colorbar(sc, label="Cote Piézométrique (m)")
+                
+                for i, row in edited_df.iterrows():
+                    ax.text(row["X_UTM"], row["Y_UTM"], f"  {row['Puits']} ({row['Cote_Piezo']:.1f}m)", fontsize=9, fontweight='bold')
+                
+                ax.set_xlabel("Coordonnée X (UTM)")
+                ax.set_ylabel("Coordonnée Y (UTM)")
+                ax.set_title("Aperçu Cartographique Piezométrique")
+                ax.grid(True, linestyle="--", alpha=0.6)
+                
+                st.pyplot(fig)
+                
+                csv = edited_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Télécharger le fichier CSV (Prêt pour QGIS)",
+                    data=csv,
+                    file_name="donnees_piezo_qgis.csv",
+                    mime="text/csv",
+                )
 
     elif sous_domaine == "Géochimie (Seuils d'Anomalie)":
         st.subheader("Traitement statistique pour l'exploration minière")
         donnees_input = st.text_area(
             "Entrer les teneurs des échantillons (séparées par des virgules)", 
-            "12.5, 14.1, 13.8, 45.2, 11.2, 15.0, 12.9, 88.5, 13.4"
+            "10.2, 11.5, 12.1, 10.8, 13.2, 11.9, 12.4, 10.5, 11.1, 45.6"
         )
         if donnees_input:
             try:
@@ -110,7 +148,6 @@ with tab2:
                 st.write(f"**Écart-type :** {ecart_type:.2f}")
                 st.error(f"**Seuil d'anomalie recommandé ($\mu + 2\sigma$) :** {seuil_anomalie:.2f}")
                 
-                # Tableau complet avec tous les détails pour le téléchargement
                 df_resultats = pd.DataFrame({
                     "Teneur": arr,
                     "Moyenne_Globale": round(moyenne, 4),
