@@ -4,6 +4,7 @@ import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.tri as tri
 
 # Configuration de la page
 st.set_page_config(page_title="MathGeo Pro", page_icon="🌍", layout="wide")
@@ -81,46 +82,61 @@ with tab2:
             st.success(f"RQD = {(l_sum/l_tot)*100:.2f} %")
 
     elif sous_domaine == "Cote Piezométrique (Hydrogéologie)":
-        st.subheader("Cartographie et Calcul Piezométrique Multipoints")
-        st.write("Modifie ou ajoute les données de tes forages/puits dans le tableau ci-dessous :")
+        st.subheader("Cartographie et Courbes Isopiézométriques")
+        st.write("Modifie ou ajoute les données de tes forages/puits (les 5 puits de l'exercice s'y trouvent) :")
         
+        # Intégration par défaut de l'exercice à 5 puits
         df_default = pd.DataFrame({
-            "Puits": ["P1", "P2", "P3", "P4"],
-            "X_UTM": [512300.0, 513400.0, 514100.0, 512800.0],
-            "Y_UTM": [8812300.0, 8813000.0, 8813500.0, 8812100.0],
-            "Altitude_Margelle": [1250.0, 1255.0, 1248.0, 1252.0],
-            "Profondeur_Eau": [12.4, 14.1, 10.2, 11.5]
+            "Puits": ["P1", "P2", "P3", "P4", "P5"],
+            "X_UTM": [512000.0, 513100.0, 514000.0, 512500.0, 513600.0],
+            "Y_UTM": [8812000.0, 8812500.0, 8813200.0, 8813800.0, 8814200.0],
+            "Altitude_Margelle": [1250.0, 1255.0, 1248.0, 1260.0, 1252.0],
+            "Profondeur_Eau": [11.5, 13.2, 9.8, 15.0, 12.1]
         })
         
         edited_df = st.data_editor(df_default, num_rows="dynamic", use_container_width=True)
         
-        if st.button("Calculer et Générer la Carte"):
-            if not edited_df.empty:
+        if st.button("Calculer et Générer la Carte Piézométrique"):
+            if not edited_df.empty and len(edited_df) >= 3:
+                # Calcul de la cote piézométrique
                 edited_df["Cote_Piezo"] = edited_df["Altitude_Margelle"] - edited_df["Profondeur_Eau"]
                 st.success("Calculs effectués avec succès !")
                 st.dataframe(edited_df, use_container_width=True)
                 
-                fig, ax = plt.subplots(figsize=(8, 6))
-                sc = ax.scatter(
-                    edited_df["X_UTM"], 
-                    edited_df["Y_UTM"], 
-                    c=edited_df["Cote_Piezo"], 
-                    cmap="viridis", 
-                    s=120, 
-                    edgecolor="k"
-                )
-                plt.colorbar(sc, label="Cote Piézométrique (m)")
+                # Génération de la carte avec courbes de niveau
+                fig, ax = plt.subplots(figsize=(9, 7))
                 
+                x = edited_df["X_UTM"].values
+                y = edited_df["Y_UTM"].values
+                z = edited_df["Cote_Piezo"].values
+                
+                # Triangulation pour interpolation des courbes
+                triang = tri.Triangulation(x, y)
+                
+                # Carte de chaleur de fond (contourf)
+                cntrf = ax.tricontourf(triang, z, levels=6, cmap="Blues", alpha=0.5)
+                plt.colorbar(cntrf, label="Cote Piézométrique (m)")
+                
+                # Tracé des courbes isopiézométriques
+                cntr = ax.tricontour(triang, z, levels=6, colors='navy', linewidths=1.2)
+                ax.clabel(cntr, inline=True, fontsize=9, fmt="%.1f m")
+                
+                # Position des puits
+                sc = ax.scatter(x, y, c=z, cmap="viridis", s=150, edgecolor="k", zorder=3)
+                
+                # Étiquettes des puits
                 for i, row in edited_df.iterrows():
-                    ax.text(row["X_UTM"], row["Y_UTM"], f"  {row['Puits']} ({row['Cote_Piezo']:.1f}m)", fontsize=9, fontweight='bold')
+                    ax.text(row["X_UTM"], row["Y_UTM"], f"  {row['Puits']} ({row['Cote_Piezo']:.1f}m)", fontsize=9, fontweight='bold', zorder=4, color='black')
                 
                 ax.set_xlabel("Coordonnée X (UTM)")
                 ax.set_ylabel("Coordonnée Y (UTM)")
-                ax.set_title("Aperçu Cartographique Piezométrique")
+                ax.set_title("Carte Piézométrique & Courbes Isopiézométriques (Sens d'écoulement)")
                 ax.grid(True, linestyle="--", alpha=0.6)
                 
                 st.pyplot(fig)
+                st.info("💡 Les lignes bleues représentent les courbes isopiézométriques. L'eau s'écoule naturellement des cotes élevées vers les cotes plus basses (perpendiculairement aux courbes).")
                 
+                # Bouton de téléchargement CSV pour QGIS
                 csv = edited_df.to_csv(index=False).encode('utf-8')
                 st.download_button(
                     label="📥 Télécharger le fichier CSV (Prêt pour QGIS)",
@@ -128,6 +144,8 @@ with tab2:
                     file_name="donnees_piezo_qgis.csv",
                     mime="text/csv",
                 )
+            else:
+                st.warning("⚠️ Veuillez entrer au moins 3 puits pour générer la triangulation et les courbes de niveau.")
 
     elif sous_domaine == "Géochimie (Seuils d'Anomalie)":
         st.subheader("Traitement statistique pour l'exploration minière")
