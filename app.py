@@ -91,7 +91,7 @@ with tab2:
         st.metric(label="Cote piézométrique (Niveau d'eau /mer)", value=f"{cote_piezo:.2f} m")
         st.info("💡 Cette valeur est prête pour la cartographie piézométrique.")
 
-    elif sous_domaine == "Géochimie (Seuils d'Anomalie)":
+     elif sous_domaine == "Géochimie (Seuils d'Anomalie)":
         st.subheader("Traitement statistique pour l'exploration minière")
         donnees_input = st.text_area(
             "Entrer les teneurs des échantillons (séparées par des virgules)", 
@@ -110,12 +110,23 @@ with tab2:
                 st.write(f"**Écart-type :** {ecart_type:.2f}")
                 st.error(f"**Seuil d'anomalie recommandé ($\mu + 2\sigma$) :** {seuil_anomalie:.2f}")
                 
-                df_resultats = pd.DataFrame({"Teneurs": arr})
+                # Création d'un tableau complet et professionnel
+                df_resultats = pd.DataFrame({
+                    "Teneur": arr,
+                    "Moyenne_Globale": round(moyenne, 4),
+                    "Ecart_Type": round(ecart_type, 4),
+                    "Seuil_Anomalie": round(seuil_anomalie, 4),
+                    "Statut": ["Anomalie" if x > seuil_anomalie else "Fond" for x in arr]
+                })
+                
+                # Afficher un aperçu du tableau directement dans l'app
+                st.dataframe(df_resultats, use_container_width=True)
+                
                 csv = df_resultats.to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    label="Télécharger les données traitées (CSV)",
+                    label="📥 Télécharger le rapport complet (CSV)",
                     data=csv,
-                    file_name='donnees_geochimie.csv',
+                    file_name='rapport_geochimie_complet.csv',
                     mime='text/csv',
                 )
             except Exception:
